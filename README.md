@@ -1,33 +1,43 @@
-# CooMate - AI 认知参谋
+# CooMate
 
-一个基于对话的 AI 认知参谋，通过结构化提问引导用户自己找到答案。
+想清楚，再出发。
+
+CooMate 是一个基于 AI 对话的认知引导工具。它不直接给答案，而是通过 5 步结构化提问，引导你自己理清思路、找到答案。
 
 ## 核心理念
 
-CooMate 不直接给答案。它通过 5 步结构化提问，引导你自己找到答案：
+CooMate 通过"咨询师-来访者"双角色架构实现深度引导：
 
-1. **反问成立性** - 质疑问题本身是否成立
-2. **深挖追问** - 暴露隐藏的假设和情绪
-3. **复盘与情绪标记** - 识别防御、逃避和循环模式
-4. **多角度思考题** - 从不同维度探索问题
-5. **一个微型实验** - 给出下一分钟就能执行的行动
+- **主流程**：AI 扮演认知咨询师，逐步提出 5 个结构化问题
+- **选项生成**：独立 LLM 调用，以用户视角生成具体的回答选项（而非泛泛的"同意/不同意"）
+- **复盘报告**：完成 5 步后，基于完整对话记录生成深度认知复盘报告
+
+### 5 步引导流程
+
+1. **反问成立性** — 质疑问题本身是否成立
+2. **深挖追问** — 暴露隐藏的假设和情绪
+3. **复盘与情绪标记** — 识别防御、逃避和循环模式
+4. **多角度思考题** — 从不同维度探索问题
+5. **一个微型实验** — 给出下一分钟就能执行的行动
 
 ## 功能特性
 
-- 5 步结构化对话流程
-- 流式输出，实时显示 AI 思考过程
-- 支持多种场景：研究思考、创意发散、情感分析、决策分析
+- 5 步逐步交互式对话（非一次性输出）
+- 每步提供 A/B/C 选项 + 自定义输入 + 跳过
+- 独立 API 生成具体选项（并行预加载）
+- 结构化 Markdown 复盘报告（含对话回顾表格、情绪模式、未被回应的问题）
+- SSE 流式输出
 - 会话保存与历史查看
-- 支持多种 LLM 提供商（MiniMax、OpenAI 兼容等）
-- 响应式设计，支持移动端
+- 用户名注册/登录（支持游客模式）
+- 响应式设计
 
 ## 技术栈
 
 **前端：**
 - Vue 3 + TypeScript
 - Vite
-- TailwindCSS
 - Pinia 状态管理
+- CSS 自定义属性（Design Tokens）
 
 **后端：**
 - Python FastAPI
@@ -39,7 +49,7 @@ CooMate 不直接给答案。它通过 5 步结构化提问，引导你自己找
 
 ### 前置要求
 
-- Python 3.9+
+- Python 3.9+（推荐 Conda 管理）
 - Node.js 18+
 - PostgreSQL
 
@@ -47,25 +57,25 @@ CooMate 不直接给答案。它通过 5 步结构化提问，引导你自己找
 
 1. 克隆项目
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Septemc/CooMate.git
 cd CooMate
 ```
 
-2. 安装后端依赖
+2. 配置环境变量
 ```bash
-pip install -r requirements.txt
+cp .env.example .env
+# 编辑 .env 文件，配置你的 LLM API 密钥和数据库连接
 ```
 
-3. 安装前端依赖
+3. 安装后端依赖
+```bash
+pip install -r apps/backend/requirements.txt
+```
+
+4. 安装前端依赖
 ```bash
 cd apps/frontend
 npm install
-```
-
-4. 配置环境变量
-```bash
-cp .env.example .env
-# 编辑 .env 文件，配置你的 API 密钥和数据库连接
 ```
 
 5. 初始化数据库
@@ -100,48 +110,48 @@ npm run dev
 
 ```
 CooMate/
-├── .env                    # 环境变量配置
-├── .env.example           # 环境变量示例
-├── .gitignore             # Git 忽略配置
-├── start-dev.bat          # Windows 启动脚本
-├── requirements.txt       # Python 依赖
-├── package.json           # 根目录依赖
-├── docs/                  # 文档
-│   ├── DESIGN.md         # 设计文档
-│   └── system_prompt.txt # AI 系统提示词
+├── .env.example            # 环境变量示例
+├── .gitignore              # Git 忽略配置
+├── start-dev.bat           # Windows 启动脚本
+├── requirements.txt        # Python 依赖
+├── docs/
+│   ├── DESIGN.md           # 设计文档
+│   └── system_prompt.txt   # AI 系统提示词
 ├── apps/
-│   ├── backend/          # 后端服务
-│   │   ├── main.py       # FastAPI 入口
-│   │   ├── config.py     # 配置管理
-│   │   ├── llm_client.py # LLM 调用客户端
-│   │   ├── database.py   # 数据库管理
-│   │   ├── auth.py       # 认证模块
-│   │   ├── routers/      # API 路由
-│   │   └── models/       # 数据模型
-│   └── frontend/         # 前端应用
-│       ├── src/
-│       │   ├── components/ # Vue 组件
-│       │   ├── stores/    # Pinia 状态管理
-│       │   ├── services/  # API 服务
-│       │   └── types/     # TypeScript 类型
-│       └── index.html    # 入口文件
-├── reference/            # 参考代码
-└── sample/              # 示例代码
+│   ├── backend/            # 后端服务
+│   │   ├── main.py         # FastAPI 入口
+│   │   ├── config.py       # 配置管理
+│   │   ├── llm_client.py   # LLM 调用 + 选项生成
+│   │   ├── database.py     # 数据库管理
+│   │   ├── auth.py         # 认证模块（用户名登录）
+│   │   ├── routers/
+│   │   │   └── chat.py     # 聊天 + 选项生成 API
+│   │   └── models/
+│   │       └── schemas.py  # Pydantic 模型
+│   └── frontend/           # 前端应用
+│       └── src/
+│           ├── components/  # Vue 组件
+│           ├── stores/      # Pinia 状态管理
+│           ├── services/    # API 服务
+│           ├── types/       # TypeScript 类型
+│           └── views/       # 页面视图
+└── reference/              # 参考代码
 ```
 
 ## API 端点
 
 ### 聊天
-- `POST /api/chat` - 发送消息（流式响应）
-- `GET /api/conversations` - 获取会话列表
-- `GET /api/conversations/{id}` - 获取会话详情
-- `DELETE /api/conversations/{id}` - 删除会话
+- `POST /api/chat` — 发送消息（SSE 流式响应）
+- `POST /api/chat/generate-options` — 生成步骤选项
+- `GET /api/conversations` — 获取会话列表
+- `GET /api/conversations/{id}` — 获取会话详情
+- `DELETE /api/conversations/{id}` — 删除会话
 
 ### 认证
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login` - 用户登录
-- `POST /api/auth/guest` - 游客登录
-- `POST /api/auth/logout` - 退出登录
+- `POST /api/auth/register` — 用户注册（用户名）
+- `POST /api/auth/login` — 用户登录
+- `POST /api/auth/guest` — 游客登录
+- `POST /api/auth/logout` — 退出登录
 
 ## 配置说明
 
@@ -149,23 +159,24 @@ CooMate/
 
 ```env
 # LLM Provider
-LLM_BASE_URL=https://api.minimaxi.com/anthropic
-LLM_API_KEY=your-api-key
-LLM_MODEL=MiniMax-M2.7
-LLM_PROVIDER=minimax_anthropic
+LLM_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
+LLM_API_KEY=your-api-key-here
+LLM_MODEL=mimo-v2.5-pro
+LLM_PROVIDER=anthropic_messages
 
 # Server
 HOST=0.0.0.0
 PORT=8266
 DEBUG=true
 
-# Database
+# CORS
+CORS_ORIGINS=http://localhost:5066,http://localhost:3000,http://127.0.0.1:5066
+
+# Database (PostgreSQL)
 DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/coomate
 ```
 
 ## 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
 
 1. Fork 项目
 2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
@@ -176,7 +187,3 @@ DATABASE_URL=postgresql+psycopg://user:password@localhost:5432/coomate
 ## 许可证
 
 MIT License
-
-## 联系方式
-
-如有问题，请提交 Issue。

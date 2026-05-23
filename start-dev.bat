@@ -2,30 +2,40 @@
 setlocal enabledelayedexpansion
 title CooMate Dev
 
-set PYTHON=C:\Users\lenovo\anaconda3\envs\pytorch2.2.2\python.exe
-set NODE_DIR=E:\nodejs
-
-set PATH=%NODE_DIR%;%PATH%
-
 echo.
 echo   CooMate - AI Cognitive Assistant
 echo   Starting dev server...
 echo.
 
-:: Check Python
-if not exist "!PYTHON!" (
-    echo [ERROR] Python not found at !PYTHON!
-    pause
-    exit /b 1
+:: Detect Python
+set "PYTHON="
+where python >nul 2>&1
+if !errorlevel!==0 (
+    for /f "delims=" %%p in ('where python') do (
+        set "PYTHON=%%p"
+        goto :found_python
+    )
 )
+where python3 >nul 2>&1
+if !errorlevel!==0 (
+    set "PYTHON=python3"
+    goto :found_python
+)
+echo [ERROR] Python not found. Please add Python to PATH.
+pause
+exit /b 1
 
-:: Check Node
+:found_python
+echo [OK] Python: !PYTHON!
+
+:: Detect Node.js
 where node >nul 2>&1
 if !errorlevel! neq 0 (
-    echo [ERROR] Node.js not found at !NODE_DIR!
+    echo [ERROR] Node.js not found. Please add Node.js to PATH.
     pause
     exit /b 1
 )
+echo [OK] Node.js found.
 
 :: Check and kill port 8266
 netstat -ano | findstr ":8266" | findstr "LISTENING" >nul 2>&1
@@ -62,11 +72,11 @@ if not exist "%~dp0apps\frontend\node_modules" (
 
 :: Start backend
 echo [1/2] Starting backend (FastAPI) on port 8266...
-start "CooMate-Backend" cmd /k "set PATH=!NODE_DIR!;%PATH% && cd /d %~dp0apps\backend && "!PYTHON!" -m uvicorn main:app --reload --host 0.0.0.0 --port 8266"
+start "CooMate-Backend" cmd /k "cd /d %~dp0apps\backend && "!PYTHON!" -m uvicorn main:app --reload --host 0.0.0.0 --port 8266"
 
-:: Start frontend (parallel, no waiting)
+:: Start frontend
 echo [2/2] Starting frontend (Vite) on port 5066...
-start "CooMate-Frontend" cmd /k "set PATH=!NODE_DIR!;%PATH% && cd /d %~dp0apps\frontend && npm run dev"
+start "CooMate-Frontend" cmd /k "cd /d %~dp0apps\frontend && npm run dev"
 
 echo.
 echo  ==============================
