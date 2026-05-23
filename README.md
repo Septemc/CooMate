@@ -159,9 +159,10 @@ CooMate/
 
 ```env
 # LLM Provider
-LLM_BASE_URL=https://token-plan-cn.xiaomimimo.com/anthropic
+# LLM_PROVIDER options: anthropic_messages | openai_compatible
+LLM_BASE_URL=https://your-llm-provider-url
 LLM_API_KEY=your-api-key-here
-LLM_MODEL=mimo-v2.5-pro
+LLM_MODEL=your-model-name
 LLM_PROVIDER=anthropic_messages
 
 # Server
