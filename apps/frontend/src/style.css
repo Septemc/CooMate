@@ -1,0 +1,146 @@
+:root {
+  color-scheme: light;
+  font-family:
+    "SF Pro Display", "PingFang SC", "Noto Sans SC", "Segoe UI", "Microsoft YaHei",
+    sans-serif;
+  --font-mono:
+    "Cascadia Mono", "SFMono-Regular", "JetBrains Mono", "Consolas", "Liberation Mono",
+    monospace;
+  --bg-canvas: #f6f5f1;
+  --bg-canvas-soft: #fbfaf7;
+  --bg-panel: rgba(255, 255, 255, 0.74);
+  --bg-panel-strong: rgba(255, 255, 255, 0.9);
+  --bg-veil: rgba(248, 246, 241, 0.82);
+  --bg-ink-soft: rgba(22, 24, 29, 0.045);
+  --line-soft: rgba(92, 100, 112, 0.11);
+  --line-default: rgba(92, 100, 112, 0.18);
+  --line-strong: rgba(35, 51, 75, 0.3);
+  --text-primary: #16181d;
+  --text-secondary: #5c6470;
+  --text-tertiary: #8a919c;
+  --text-inverse: #fdfcf9;
+  --accent-blue: #3e6fe6;
+  --accent-blue-strong: #2c57c7;
+  --accent-blue-soft: rgba(62, 111, 230, 0.12);
+  --accent-green: #2f8f78;
+  --accent-green-soft: rgba(47, 143, 120, 0.13);
+  --accent-amber: #b7791f;
+  --accent-amber-soft: rgba(183, 121, 31, 0.13);
+  --accent-danger: #c85f4a;
+  --accent-danger-soft: rgba(200, 95, 74, 0.14);
+  --accent-rose-soft: rgba(186, 100, 72, 0.11);
+  --shadow-float: 0 28px 60px -46px rgba(29, 36, 48, 0.34);
+  --shadow-soft: 0 18px 40px -34px rgba(29, 36, 48, 0.22);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --bg-1: var(--bg-panel);
+  --bg-2: var(--bg-panel-strong);
+  --text-1: var(--text-primary);
+  --text-2: var(--text-secondary);
+  --text-3: var(--text-tertiary);
+  --line-subtle: var(--line-soft);
+  --color-surface: var(--bg-panel-strong);
+  --color-surface-muted: rgba(255, 255, 255, 0.62);
+  --color-border-default: var(--line-default);
+  --color-border-muted: var(--line-soft);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: color-mix(in srgb, var(--text-tertiary) 88%, white);
+  --color-primary: var(--accent-blue);
+  --color-primary-soft: var(--accent-blue-soft);
+  --color-primary-soft-border: color-mix(in srgb, var(--accent-blue) 28%, transparent);
+  --color-primary-ring: rgba(62, 111, 230, 0.14);
+  --color-amber: var(--accent-amber);
+  --color-amber-soft: var(--accent-amber-soft);
+  --color-amber-strong: color-mix(in srgb, var(--accent-amber) 84%, #5f4213);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+html {
+  background: var(--bg-canvas);
+}
+
+body {
+  margin: 0;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at top left, rgba(62, 111, 230, 0.08), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(183, 121, 31, 0.08), transparent 26%),
+    linear-gradient(180deg, #fbfaf7 0%, #f6f5f1 100%);
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.28;
+  pointer-events: none;
+  z-index: -1;
+}
+
+button,
+textarea,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+textarea,
+input {
+  caret-color: var(--accent-blue);
+}
+
+::selection {
+  background: rgba(62, 111, 230, 0.18);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-default) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(92, 100, 112, 0.18);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(92, 100, 112, 0.28);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}

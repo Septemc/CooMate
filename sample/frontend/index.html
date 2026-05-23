@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CooMate - AI 认知参谋</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2v4'/><path d='M12 18v4'/><path d='M4.93 4.93l2.83 2.83'/><path d='M16.24 16.24l2.83 2.83'/><path d='M2 12h4'/><path d='M18 12h4'/><path d='M4.93 19.07l2.83-2.83'/><path d='M16.24 7.76l2.83-2.83'/><circle cx='12' cy='12' r='4'/></svg>" />
+  <style>
+    /* ========== Reset & Variables ========== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* Light Theme (default) */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8fafc;
+      --bg-tertiary: #f1f5f9;
+      --bg-hover: #e2e8f0;
+      --bg-input: #ffffff;
+      --border: #e2e8f0;
+      --border-light: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-dim: #dbeafe;
+      --step-1: #2563eb;
+      --step-2: #16a34a;
+      --step-3: #ca8a04;
+      --step-4: #9333ea;
+      --step-5: #ea580c;
+      --step-1-bg: #eff6ff;
+      --step-2-bg: #f0fdf4;
+      --step-3-bg: #fefce8;
+      --step-4-bg: #faf5ff;
+      --step-5-bg: #fff7ed;
+      --step-1-border: #bfdbfe;
+      --step-2-border: #bbf7d0;
+      --step-3-border: #fef08a;
+      --step-4-border: #e9d5ff;
+      --step-5-border: #fed7aa;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --radius: 10px;
+      --radius-sm: 8px;
+      --transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Dark Theme */
+    [data-theme="dark"] {
+      --bg-primary: #212121;
+      --bg-secondary: #171717;
+      --bg-tertiary: #2f2f2f;
+      --bg-hover: #2f2f2f;
+      --bg-input: #2f2f2f;
+      --border: #424242;
+      --border-light: #565656;
+      --text-primary: #ececec;
+      --text-secondary: #b4b4b4;
+      --text-muted: #808080;
+      --accent: #10a37f;
+      --accent-hover: #1a7f64;
+      --accent-dim: #1f2e2a;
+      --step-1: #10a37f;
+      --step-2: #22c55e;
+      --step-3: #eab308;
+      --step-4: #a855f7;
+      --step-5: #f97316;
+      --step-1-bg: rgba(16,163,127,0.08);
+      --step-2-bg: rgba(34,197,94,0.08);
+      --step-3-bg: rgba(234,179,8,0.08);
+      --step-4-bg: rgba(168,85,247,0.08);
+      --step-5-bg: rgba(249,115,22,0.08);
+      --step-1-border: rgba(16,163,127,0.25);
+      --step-2-border: rgba(34,197,94,0.25);
+      --step-3-border: rgba(234,179,8,0.25);
+      --step-4-border: rgba(168,85,247,0.25);
+      --step-5-border: rgba(249,115,22,0.25);
+      --shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ========== Layout ========== */
+    .app {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ========== Sidebar ========== */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: margin-left var(--transition), transform var(--transition);
+    }
+
+    .sidebar.collapsed {
+      margin-left: -280px;
+      transform: translateX(0); /* remove the old transform to avoid double translation */
+    }
+
+    .sidebar-header {
+      height: 56px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-new-chat {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-new-chat:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-new-chat svg, .btn-icon svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .conv-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .conv-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 13px;
+      transition: all var(--transition);
+      position: relative;
+    }
+
+    .conv-item:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .conv-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .conv-item .title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .conv-item .delete-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all var(--transition);
+    }
+
+    .conv-item:hover .delete-btn {
+      opacity: 1;
+    }
+
+    .conv-item .delete-btn:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* ========== Sidebar Footer - Auth ========== */
+    .sidebar-footer {
+      border-top: 1px solid var(--border);
+      padding: 12px;
+    }
+
+    .auth-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .user-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-email {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .btn-logout {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all var(--transition);
+    }
+
+    .btn-logout:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .login-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .login-input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 8px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-login:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-login:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .auth-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-outline {
+      flex: 1;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-hover);
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 8px 16px;
+      background: var(--text-primary);
+      border: 1px solid var(--text-primary);
+      border-radius: var(--radius-sm);
+      color: var(--bg-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: center;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all var(--transition);
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      transform: translateY(20px);
+      transition: transform var(--transition);
+    }
+
+    .modal-overlay.show .modal-content {
+      transform: translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .btn-guest {
+      width: 100%;
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-guest:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    /* ========== Main Content ========== */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      position: relative;
+    }
+
+    /* ========== Header ========== */
+    .header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-primary);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-show-sidebar {
+      width: 36px;
+      height: 36px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-show-sidebar:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .btn-show-sidebar svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .sidebar.collapsed ~ .main .btn-show-sidebar {
+      display: flex;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-action {
+      padding: 6px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .btn-action:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--border-light);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-theme {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .btn-theme:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .btn-theme svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .theme-icon-sun { display: none; }
+    .theme-icon-moon { display: block; }
+    [data-theme="dark"] .theme-icon-sun { display: block; }
+    [data-theme="dark"] .theme-icon-moon { display: none; }
+
+    /* ========== Messages Area ========== */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+
+    .messages-inner {
+      max-width: 768px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ========== Empty State ========== */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .empty-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      max-width: 440px;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .shortcut-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .shortcut-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all var(--transition);
+      text-align: left;
+    }
+
+    .shortcut-btn:hover {
+      background: var(--bg-tertiary);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow);
+    }
+
+    .shortcut-btn .icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .shortcut-btn .text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ========== Message ========== */
+    .message {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .message.user {
+      justify-content: flex-end;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .avatar.ai {
+      background: linear-gradient(135deg, var(--accent), #7c3aed);
+      color: white;
+    }
+
+    .avatar.user {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+
+    .message-content {
+      max-width: 85%;
+      min-width: 0;
+    }
+
+    .message-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .message.user .message-bubble {
+      background: var(--accent);
+      color: white;
+      border-radius: 18px 18px 4px 18px;
+    }
+
+    .message.ai .message-bubble {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 18px 18px 18px 4px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ========== Steps ========== */
+    .steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step-card {
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      border: 1px solid;
+      animation: stepFadeIn 0.4s ease-out both;
+      box-shadow: var(--shadow);
+    }
+
+    .step-card:nth-child(1) { animation-delay: 0ms; }
+    .step-card:nth-child(2) { animation-delay: 80ms; }
+    .step-card:nth-child(3) { animation-delay: 160ms; }
+    .step-card:nth-child(4) { animation-delay: 240ms; }
+    .step-card:nth-child(5) { animation-delay: 320ms; }
+
+    @keyframes stepFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-card[data-step="1"] { border-color: var(--step-1-border); background: var(--step-1-bg); }
+    .step-card[data-step="2"] { border-color: var(--step-2-border); background: var(--step-2-bg); }
+    .step-card[data-step="3"] { border-color: var(--step-3-border); background: var(--step-3-bg); }
+    .step-card[data-step="4"] { border-color: var(--step-4-border); background: var(--step-4-bg); }
+    .step-card[data-step="5"] { border-color: var(--step-5-border); background: var(--step-5-bg); }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .step-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .step-card[data-step="1"] .step-badge { background: var(--step-1); }
+    .step-card[data-step="2"] .step-badge { background: var(--step-2); }
+    .step-card[data-step="3"] .step-badge { background: var(--step-3); }
+    .step-card[data-step="4"] .step-badge { background: var(--step-4); }
+    .step-card[data-step="5"] .step-badge { background: var(--step-5); }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .step-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .step-content p { margin-bottom: 8px; }
+    .step-content ul, .step-content ol { padding-left: 20px; margin-bottom: 8px; }
+    .step-content li { margin-bottom: 4px; }
+    .step-content strong { color: var(--text-primary); font-weight: 600; }
+
+    /* Streaming */
+    .streaming-indicator {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .streaming-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease-in-out infinite;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .streaming-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .streaming-text::after {
+      content: '|';
+      animation: blink 1s step-end infinite;
+      color: var(--accent);
+      margin-left: 1px;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    /* ========== Input Area ========== */
+    .input-area {
+      border-top: 1px solid var(--border);
+      background: var(--bg-primary);
+      padding: 16px 24px;
+    }
+
+    .input-wrapper {
+      max-width: 768px;
+      margin: 0 auto;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .input-field {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      min-height: 44px;
+      max-height: 200px;
+      font-family: inherit;
+      transition: all var(--transition);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .btn-send {
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+
+    .btn-send:hover {
+      background: var(--accent-hover);
+      transform: scale(1.02);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-send svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    /* ========== Scrollbar ========== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-light);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* ========== Toast ========== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: var(--bg-primary);
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 200;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.1);
+        margin-left: 0; /* Reset desktop margin */
+        transform: translateX(0);
+      }
+
+      .sidebar.collapsed {
+        margin-left: 0;
+        transform: translateX(-100%);
+      }
+
+      .shortcut-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="btn-new-chat" onclick="newChat()">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新对话
+        </button>
+        <button class="btn-icon" onclick="toggleSidebar()" title="收起侧边栏">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+      </div>
+      <nav class="conv-list" id="convList"></nav>
+      <div class="sidebar-footer">
+        <div class="auth-section" id="authSection">
+          <!-- Login form (shown when not logged in) -->
+          <div class="auth-buttons" id="loginFormArea">
+            <button class="btn-outline" onclick="openAuthModal('login')">登录</button>
+            <button class="btn-primary" onclick="openAuthModal('register')">注册</button>
+          </div>
+          <!-- User info (shown when logged in) -->
+          <div class="user-info" id="userInfo" style="display:none">
+            <div class="user-avatar" id="userAvatar">U</div>
+            <div class="user-details">
+              <div class="user-name" id="userName">用户</div>
+              <div class="user-email" id="userEmail">user@example.com</div>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()" title="退出登录">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="header">
+        <div class="header-left">
+          <button class="btn-show-sidebar" onclick="toggleSidebar()" title="展开侧边栏">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+          <span class="header-title" id="headerTitle">新对话</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn-action" id="btnAngles" disabled onclick="regenerateAngles()">换个角度</button>
+          <button class="btn-action" id="btnExport" disabled onclick="exportReview()">导出复盘</button>
+          <button class="btn-theme" onclick="toggleTheme()" title="切换主题">
+            <svg class="theme-icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="messages-container" id="messagesContainer">
+        <div class="messages-inner" id="messagesInner">
+          <!-- Empty state -->
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+            </div>
+            <h2 class="empty-title">我是 CooMate，你的认知参谋</h2>
+            <p class="empty-desc">我不会直接给你答案。我会通过结构化提问，引导你自己找到答案。说出你的困惑。</p>
+            <div class="shortcut-grid">
+              <button class="shortcut-btn" onclick="sendQuick('我纠结要不要分手')">
+                <span class="icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </span>
+                <span class="text">情感困惑</span>
+              </button>
+              <button class="shortcut-btn" onclick="sendQuick('我想做一个关于AI的产品')">
+                <span class="icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                </span>
+                <span class="text">创意发散</span>
+              </button>
+              <button class="shortcut-btn" onclick="sendQuick('我想学机器学习')">
+                <span class="icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                </span>
+                <span class="text">学习规划</span>
+              </button>
+              <button class="shortcut-btn" onclick="sendQuick('我在纠结考研还是工作')">
+                <span class="icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                </span>
+                <span class="text">决策分析</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea
+            class="input-field"
+            id="inputField"
+            placeholder="说出你的困惑，我来引导你思考..."
+            rows="1"
+          ></textarea>
+          <button class="btn-send" id="btnSend" disabled onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="authModalTitle">登录</div>
+        <button class="modal-close" onclick="closeAuthModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="login-form">
+        <input class="login-input" id="loginEmail" type="email" placeholder="邮箱地址" />
+        <input class="login-input" id="loginPassword" type="password" placeholder="密码" />
+        <button class="btn-primary" style="width: 100%; margin-top: 8px;" id="btnLogin" onclick="handleLogin()">登录</button>
+        <div class="auth-divider">或</div>
+        <button class="btn-outline" style="width: 100%; margin-top: 8px;" onclick="handleGuestMode()">游客模式继续</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== State ==========
+    const API_BASE = '/api';
+    let currentConvId = null;
+    let conversations = [];
+    let messages = [];
+    let isLoading = false;
+    let streamingText = '';
+    let isLoggedIn = false;
+    let currentUser = null;
+
+    // ========== DOM ==========
+    const $ = id => document.getElementById(id);
+    const sidebar = $('sidebar');
+    const convList = $('convList');
+    const messagesInner = $('messagesInner');
+    const emptyState = $('emptyState');
+    const inputField = $('inputField');
+    const btnSend = $('btnSend');
+    const btnAngles = $('btnAngles');
+    const btnExport = $('btnExport');
+    const headerTitle = $('headerTitle');
+    const loginFormArea = $('loginFormArea');
+    const userInfo = $('userInfo');
+    const toast = $('toast');
+
+    // ========== Init ==========
+    inputField.addEventListener('input', autoResize);
+    inputField.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('coomate-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
+    // Load saved auth state
+    const savedUser = localStorage.getItem('coomate-user');
+    if (savedUser) {
+      try {
+        currentUser = JSON.parse(savedUser);
+        isLoggedIn = true;
+        updateAuthUI();
+      } catch (e) {}
+    }
+
+    // Load sidebar state
+    const sidebarCollapsed = localStorage.getItem('coomate-sidebar') === 'collapsed';
+    if (sidebarCollapsed) {
+      sidebar.classList.add('collapsed');
+    }
+
+    loadConversations();
+
+    function autoResize() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+      btnSend.disabled = !this.value.trim() || isLoading;
+    }
+
+    // ========== Theme ==========
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('coomate-theme', next);
+    }
+
+    // ========== Sidebar ==========
+    function toggleSidebar() {
+      sidebar.classList.toggle('collapsed');
+      localStorage.setItem('coomate-sidebar', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+    }
+
+    // ========== Auth Modal ==========
+    let authMode = 'login';
+    function openAuthModal(mode) {
+      authMode = mode;
+      $('authModalTitle').textContent = mode === 'login' ? '登录' : '注册';
+      $('btnLogin').textContent = mode === 'login' ? '登录' : '注册';
+      $('authModal').classList.add('show');
+    }
+
+    function closeAuthModal() {
+      $('authModal').classList.remove('show');
+    }
+
+    // ========== Auth ==========
+    function updateAuthUI() {
+      const loginFormArea = $('loginFormArea');
+      if (isLoggedIn && currentUser) {
+        if (loginFormArea) loginFormArea.style.display = 'none';
+        userInfo.style.display = 'flex';
+        $('userAvatar').textContent = (currentUser.name || 'U')[0].toUpperCase();
+        $('userName').textContent = currentUser.name || '用户';
+        $('userEmail').textContent = currentUser.email || '';
+      } else {
+        if (loginFormArea) loginFormArea.style.display = 'flex';
+        userInfo.style.display = 'none';
+      }
+    }
+
+    async function handleLogin() {
+      const email = $('loginEmail').value.trim();
+      const password = $('loginPassword').value.trim();
+      if (!email || !password) {
+        showToast('请输入邮箱和密码');
+        return;
+      }
+
+      const btn = $('btnLogin');
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+
+      try {
+        // Mock login - replace with real API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Simulate successful login
+        currentUser = {
+          id: 'user-' + Date.now(),
+          name: email.split('@')[0],
+          email: email
+        };
+        isLoggedIn = true;
+        localStorage.setItem('coomate-user', JSON.stringify(currentUser));
+        updateAuthUI();
+        closeAuthModal();
+        showToast('登录成功');
+      } catch (e) {
+        showToast('登录失败：' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = authMode === 'login' ? '登录' : '注册';
+      }
+    }
+
+    function handleGuestMode() {
+      isLoggedIn = true;
+      currentUser = { id: 'guest', name: '游客', email: 'guest@local' };
+      localStorage.setItem('coomate-user', JSON.stringify(currentUser));
+      updateAuthUI();
+      closeAuthModal();
+      showToast('已进入游客模式');
+    }
+
+    function handleLogout() {
+      isLoggedIn = false;
+      currentUser = null;
+      localStorage.removeItem('coomate-user');
+      updateAuthUI();
+      showToast('已退出登录');
+    }
+
+    // ========== Toast ==========
+    function showToast(message, duration = 2000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ========== API ==========
+    async function loadConversations() {
+      try {
+        const resp = await fetch(API_BASE + '/conversations');
+        conversations = await resp.json();
+        renderConvList();
+      } catch (e) {
+        console.error('Failed to load conversations:', e);
+      }
+    }
+
+    async function loadConversation(id) {
+      try {
+        const resp = await fetch(API_BASE + '/conversations/' + id);
+        const conv = await resp.json();
+        currentConvId = conv.id;
+        messages = conv.messages.map(m => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          steps: m.steps || null,
+          timestamp: m.timestamp
+        }));
+        headerTitle.textContent = conv.title;
+        renderMessages();
+        updateButtons();
+      } catch (e) {
+        console.error('Failed to load conversation:', e);
+      }
+    }
+
+    async function deleteConversation(id, e) {
+      e.stopPropagation();
+      try {
+        await fetch(API_BASE + '/conversations/' + id, { method: 'DELETE' });
+        conversations = conversations.filter(c => c.id !== id);
+        if (currentConvId === id) newChat();
+        renderConvList();
+        showToast('对话已删除');
+      } catch (e) {
+        console.error('Failed to delete conversation:', e);
+      }
+    }
+
+    // ========== Actions ==========
+    function newChat() {
+      currentConvId = null;
+      messages = [];
+      headerTitle.textContent = '新对话';
+      renderMessages();
+      updateButtons();
+      renderConvList();
+      inputField.focus();
+    }
+
+    function sendQuick(text) {
+      inputField.value = text;
+      sendMessage();
+    }
+
+    async function regenerateAngles() {
+      if (isLoading) return;
+      await sendMessageInternal('请换个角度', 'regenerate_angles');
+    }
+
+    async function exportReview() {
+      if (isLoading) return;
+      await sendMessageInternal('请导出复盘', 'export_review');
+    }
+
+    async function sendMessage() {
+      const text = inputField.value.trim();
+      if (!text || isLoading) return;
+      inputField.value = '';
+      autoResize.call(inputField);
+      await sendMessageInternal(text, 'chat');
+    }
+
+    async function sendMessageInternal(text, action) {
+      if (isLoading) return;
+
+      const userMsg = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: text,
+        timestamp: Date.now() / 1000
+      };
+      messages.push(userMsg);
+
+      if (messages.length === 1) {
+        headerTitle.textContent = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+      }
+
+      isLoading = true;
+      streamingText = '';
+      updateButtons();
+      renderMessages();
+
+      try {
+        const resp = await fetch(API_BASE + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            conversation_id: currentConvId,
+            action: action
+          })
+        });
+
+        // Backend runs the stream, so let's read the stream properly
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let fullText = '';
+        let finalSteps = null;
+
+        // Since doing so we need to add the empty assistant message FIRST so UI has something to stream into
+        const assistantMsg = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: '',
+          steps: null,
+          timestamp: Date.now() / 1000
+        };
+        messages.push(assistantMsg);
+        renderMessages(); // This makes the AI bubble appear with empty text
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          // keep the last incomplete chunk in the buffer
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            try {
+              const data = JSON.parse(trimmed.slice(6));
+              if (data.type === 'chunk' && data.content) {
+                fullText += data.content;
+                streamingText = fullText;
+                assistantMsg.content = fullText; // update the message content dynamically
+                renderMessages(); // strictly re-render so it shows streaming text
+              }
+              if (data.type === 'done') {
+                finalSteps = data.steps || null;
+                if (data.conversation_id) {
+                  currentConvId = data.conversation_id;
+                }
+              }
+            } catch (e) {}
+          }
+        }
+
+        if (!finalSteps) {
+          finalSteps = parseSteps(fullText);
+        }
+
+        // finally done streams, assign final parsed values
+        assistantMsg.content = fullText;
+        assistantMsg.steps = finalSteps;
+        streamingText = ''; // stream ends
+        renderMessages();
+
+        await loadConversations();
+      } catch (e) {
+        console.error('Chat error:', e);
+        messages.push({
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: '抱歉，发生了错误。请检查后端服务是否运行正常。',
+          timestamp: Date.now() / 1000
+        });
+      } finally {
+        isLoading = false;
+        streamingText = '';
+        renderMessages();
+        updateButtons();
+        scrollToBottom();
+      }
+    }
+
+    // ========== Parsing ==========
+    function parseSteps(text) {
+      const pattern = /\*\*第([一二三四五])步[：:]\s*(.+?)\*\*\s*(.*?)(?=\*\*第[一二三四五]步|$)/gs;
+      const stepMap = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5 };
+      const steps = [];
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        steps.push({
+          step: stepMap[match[1]] || 0,
+          title: '第' + match[1] + '步：' + match[2].trim(),
+          content: match[3].trim()
+        });
+      }
+      return steps.length ? steps : [{ step: 0, title: '回复', content: text }];
+    }
+
+    // ========== Rendering ==========
+    function renderConvList() {
+      convList.innerHTML = conversations.map(c => `
+        <div class="conv-item ${c.id === currentConvId ? 'active' : ''}" onclick="loadConversation('${c.id}')">
+          <span class="title">${escapeHtml(c.title)}</span>
+          <button class="delete-btn" onclick="deleteConversation('${c.id}', event)" title="删除">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderMessages() {
+      if (messages.length === 0) {
+        messagesInner.innerHTML = '';
+        messagesInner.appendChild(emptyState);
+        emptyState.style.display = 'flex';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      let html = '';
+      for (const msg of messages) {
+        html += renderMessage(msg);
+      }
+      messagesInner.innerHTML = html;
+      messagesInner.prepend(emptyState); // keep it in DOM but hidden
+      scrollToBottom();
+    }
+
+    function renderMessage(msg) {
+      const avatarName = currentUser ? (currentUser.name || 'U')[0].toUpperCase() : '你';
+      if (msg.role === 'user') {
+        return `
+          <div class="message user">
+            <div class="message-content">
+              <div class="message-bubble">${escapeHtml(msg.content)}</div>
+            </div>
+            <div class="avatar user">${avatarName}</div>
+          </div>`;
+      }
+
+      let contentHtml = '';
+      if (msg.role === 'assistant' && isLoading && msg === messages[messages.length - 1]) {
+        // Active streaming message chunk
+        if (!msg.content && (!msg.steps || msg.steps.length === 0 || msg.steps[0].step === 0)) {
+           contentHtml = `
+            <div class="streaming-indicator">
+              <div class="streaming-dot"></div>
+              <div class="streaming-text">思考中...</div>
+            </div>`;
+        } else {
+          // If we have content, handle it (either steps or bubble)
+          if (msg.steps && msg.steps.length > 0 && msg.steps[0].step !== 0) {
+            contentHtml = '<div class="steps-container">' + msg.steps.map(renderStep).join('') + '</div>';
+          } else {
+            contentHtml = `<div class="message-bubble streaming-text">${escapeHtml(msg.content)}</div>`;
+          }
+        }
+      } else {
+        if (msg.steps && msg.steps.length > 0 && msg.steps[0].step !== 0) {
+          contentHtml = '<div class="steps-container">' + msg.steps.map(renderStep).join('') + '</div>';
+        } else {
+          contentHtml = `<div class="message-bubble">${escapeHtml(msg.content)}</div>`;
+        }
+      }
+
+      return `
+        <div class="message ai">
+          <div class="avatar ai">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg>
+          </div>
+          <div class="message-content">${contentHtml}</div>
+        </div>`;
+    }
+
+    function renderStep(step) {
+      return `
+        <div class="step-card" data-step="${step.step}">
+          <div class="step-header">
+            <span class="step-badge">${step.step}</span>
+            <span class="step-title">${escapeHtml(step.title)}</span>
+          </div>
+          <div class="step-content">${formatMarkdown(step.content)}</div>
+        </div>`;
+    }
+
+    function renderStreaming() {
+      // Obsolete. Handled dynamically inside renderMessage & renderMessages now.
+    }
+
+    function updateButtons() {
+      const hasMessages = messages.length > 0;
+      btnAngles.disabled = !hasMessages || isLoading;
+      btnExport.disabled = !hasMessages || isLoading;
+      btnSend.disabled = !inputField.value.trim() || isLoading;
+    }
+
+    function scrollToBottom() {
+      const container = $('messagesContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // ========== Utils ==========
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatMarkdown(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br>');
+    }
+  </script>
+</body>
+</html>

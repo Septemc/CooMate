@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CooMate - 你的智能思考引导者</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="theme-blue-white">
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>CooMate</h2>
+                <button class="new-chat-btn" id="new-chat-btn">
+                    <i class="fas fa-plus"></i> 新鲜的思考
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="history-section">
+                    <h3>最近的引导</h3>
+                    <div class="history-item"><i class="far fa-message"></i> 探索：产品新策略</div>
+                    <div class="history-item"><i class="far fa-message"></i> 情绪缓解：工作焦虑</div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="theme-selector-container" style="margin-bottom: 15px;">
+                    <i class="fas fa-palette"></i>
+                    <select id="theme-selector">
+                        <option value="theme-blue-white">蓝白配色 (首选)</option>
+                        <option value="theme-claude">Claude经典</option>
+                        <option value="theme-dark">暗色空间</option>
+                    </select>
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar"><i class="fas fa-user"></i></div>
+                    <div class="user-info">
+                        <div class="user-name">未登录</div>
+                        <div class="user-action">点击登录账户</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主聊天区域 -->
+        <main class="main-content">
+            <header class="top-nav">
+                <button id="toggle-sidebar" class="icon-btn"><i class="fas fa-bars"></i></button>
+                <div class="nav-title">CooMate</div>
+                <div class="nav-actions">
+                    <button class="icon-btn" id="toggle-right-sidebar"><i class="fas fa-tasks"></i></button>
+                </div>
+            </header>
+
+            <div class="chat-container" id="chat-container">
+                <!-- 欢迎屏幕 -->
+                <div class="welcome-screen" id="welcome-screen">
+                    <div class="welcome-logo">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h1>您好，我是 CooMate。</h1>
+                    <p class="subtitle">我不会直接给您答案，而是通过层层追问，引导您理清思绪、看破迷局。<br>请选择您想探索的板块，或直接在一片空白中畅所欲言：</p>
+                    
+                    <div class="category-grid">
+                        <div class="category-card" data-category="research">
+                            <i class="fas fa-microscope text-icon"></i>
+                            <h3>深度研究</h3>
+                            <p>梳理科研、项目等复杂技术问题的逻辑与思路，挖掘底层本质。</p>
+                        </div>
+                        <div class="category-card" data-category="creative">
+                            <i class="fas fa-lightbulb text-icon"></i>
+                            <h3>创意发散</h3>
+                            <p>打破思维定势，协助产品设计与灵感迸发，让创意自然流露。</p>
+                        </div>
+                        <div class="category-card" data-category="emotion">
+                            <i class="fas fa-heart text-icon"></i>
+                            <h3>情感分析</h3>
+                            <p>平复情绪，客观审视内心的波澜，找回内在的平静与力量。</p>
+                        </div>
+                        <div class="category-card" data-category="decision">
+                            <i class="fas fa-balance-scale text-icon"></i>
+                            <h3>决策分析</h3>
+                            <p>权衡利弊，打破纠结，为生活与工作中的两难境地做出明智选择。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 动态消息流将插入在此处 -->
+            </div>
+
+            <!-- 输入区域 -->
+            <div class="input-wrapper">
+                <!-- AI 问询模式建议区 (默认隐藏) -->
+                <div class="suggestions-bar" id="suggestions-bar" style="display: none;">
+                    <div class="suggestion-title">您可以参考以下思路，或直接输入您的想法：</div>
+                    <div class="suggestion-options" id="suggestion-options">
+                        <!-- 动态填充 -->
+                    </div>
+                </div>
+
+                <div class="input-box">
+                    <textarea id="user-input" rows="1" placeholder="说出您现在的想法或困惑..."></textarea>
+                    <button id="send-btn" class="send-btn" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+                <div class="disclaimer">CooMate 的目标是激发您的思考，而非提供标准答案。请享受探索的过程。</div>
+            </div>
+        </main>
+
+        <!-- 右侧边栏：思考进程 -->
+        <aside class="right-sidebar closed" id="right-sidebar">
+            <div class="sidebar-header">
+                <h2>思考节点</h2>
+            </div>
+            <div class="sidebar-content">
+                <ul class="process-timeline">
+                    <li class="timeline-step active">
+                        <div class="step-icon"><i class="fas fa-crosshairs"></i></div>
+                        <div class="step-content">
+                            <h4>目标澄清</h4>
+                            <p>等待收集初衷</p>
+                        </div>
+                    </li>
+                    <li class="timeline-step">
+                        <div class="step-icon"><i class="fas fa-search"></i></div>
+                        <div class="step-content">
+                            <h4>现状解构</h4>
+                            <p>梳理背景与约束</p>
+                        </div>
+                    </li>
+                    <li class="timeline-step">
+                        <div class="step-icon"><i class="fas fa-lightbulb"></i></div>
+                        <div class="step-content">
+                            <h4>思路发散</h4>
+                            <p>待启动</p>
+                        </div>
+                    </li>
+                    <li class="timeline-step">
+                        <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="step-content">
+                            <h4>收束决策</h4>
+                            <p>待启动</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
