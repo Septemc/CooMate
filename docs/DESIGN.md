@@ -229,8 +229,8 @@ SSE 流式解析 Anthropic 格式：
 
 ### 后端
 ```bash
-cd backend
-pip install -r requirements.txt
+cd apps/backend
+pip install -r apps/backend/requirements.txt
 python main.py
 # 或 uvicorn main:app --reload --port 8000
 ```

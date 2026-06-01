@@ -9,12 +9,17 @@ echo.
 
 :: Detect Python
 set "PYTHON="
-where python >nul 2>&1
-if !errorlevel!==0 (
-    for /f "delims=" %%p in ('where python') do (
+for /f "delims=" %%p in ('where python') do (
+    echo %%p | findstr /I /C:"WindowsApps\python.exe" >nul 2>&1
+    if !errorlevel! neq 0 (
         set "PYTHON=%%p"
         goto :found_python
     )
+)
+where py >nul 2>&1
+if !errorlevel!==0 (
+    set "PYTHON=py"
+    goto :found_python
 )
 where python3 >nul 2>&1
 if !errorlevel!==0 (
@@ -27,6 +32,12 @@ exit /b 1
 
 :found_python
 echo [OK] Python: !PYTHON!
+"!PYTHON!" -c "import sys; print(sys.executable)" >nul 2>&1
+if !errorlevel! neq 0 (
+    echo [ERROR] Python executable validation failed: !PYTHON!
+    pause
+    exit /b 1
+)
 
 :: Detect Node.js
 where node >nul 2>&1
@@ -72,11 +83,21 @@ if not exist "%~dp0apps\frontend\node_modules" (
 
 :: Start backend
 echo [1/2] Starting backend (FastAPI) on port 8266...
-start "CooMate-Backend" cmd /k "cd /d %~dp0apps\backend && "!PYTHON!" -m uvicorn main:app --reload --host 0.0.0.0 --port 8266"
+start "CooMate-Backend" cmd /k "cd /d ""%~dp0apps\backend"" && ""!PYTHON!"" -m uvicorn main:app --reload --host 127.0.0.1 --port 8266"
+
+echo Waiting for backend health check...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0; $i -lt 30; $i++){ try { $r=Invoke-WebRequest -Uri 'http://127.0.0.1:8266/health' -UseBasicParsing -TimeoutSec 1; if($r.StatusCode -eq 200){ $ok=$true; break } } catch {}; Start-Sleep -Seconds 1 }; if($ok){ exit 0 } else { exit 1 }"
+if !errorlevel! neq 0 (
+    echo [ERROR] Backend did not start on http://127.0.0.1:8266.
+    echo         Check the CooMate-Backend window for the Python error.
+    pause
+    exit /b 1
+)
+echo [OK] Backend is ready.
 
 :: Start frontend
 echo [2/2] Starting frontend (Vite) on port 5066...
-start "CooMate-Frontend" cmd /k "cd /d %~dp0apps\frontend && npm run dev"
+start "CooMate-Frontend" cmd /k "cd /d ""%~dp0apps\frontend"" && npm run dev"
 
 echo.
 echo  ==============================

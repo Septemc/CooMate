@@ -113,12 +113,12 @@ CooMate/
 ├── .env.example            # 环境变量示例
 ├── .gitignore              # Git 忽略配置
 ├── start-dev.bat           # Windows 启动脚本
-├── requirements.txt        # Python 依赖
 ├── docs/
 │   ├── DESIGN.md           # 设计文档
 │   └── system_prompt.txt   # AI 系统提示词
 ├── apps/
 │   ├── backend/            # 后端服务
+│   │   ├── requirements.txt # Python 依赖
 │   │   ├── main.py         # FastAPI 入口
 │   │   ├── config.py       # 配置管理
 │   │   ├── llm_client.py   # LLM 调用 + 选项生成
