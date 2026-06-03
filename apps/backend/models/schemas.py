@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
     action: str = "chat"  # chat | regenerate_angles | export_review
+    multi_probe: bool = False
 
 
 class StepChunk(BaseModel):

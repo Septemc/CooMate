@@ -17,6 +17,7 @@ export async function* streamChat(
   message: string,
   conversationId?: string,
   action: string = 'chat',
+  multiProbe: boolean = false,
 ): AsyncGenerator<StreamChunk> {
   const resp = await fetch(`${BASE}/chat`, {
     method: 'POST',
@@ -25,6 +26,7 @@ export async function* streamChat(
       message,
       conversation_id: conversationId,
       action,
+      multi_probe: multiProbe,
     }),
   })
 

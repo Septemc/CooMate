@@ -12,6 +12,7 @@ export const useChatStore = defineStore('chat', () => {
   const streamingContent = ref('')
   const streamingSteps = ref<StepContent[]>([])
   const stepOptionsLoading = ref<Record<string, boolean>>({})
+  const multiProbeEnabled = ref(false)
 
   const authToken = ref<string | null>(null)
   const currentUser = ref<{ id: string; username: string; name: string; is_guest: boolean } | null>(null)
@@ -90,6 +91,7 @@ export const useChatStore = defineStore('chat', () => {
 
   async function fetchStepOptions(msgId: string, step: StepContent) {
     const key = `${msgId}-${step.step}`
+    if (stepOptionsLoading.value[key] || step.options?.length) return
     stepOptionsLoading.value[key] = true
     try {
       const options = await generateStepOptions(
@@ -111,9 +113,11 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function prefetchAllStepOptions(msgId: string, steps: StepContent[]) {
-    const validSteps = steps.filter(s => s.step > 0 && !s.options?.length)
-    await Promise.all(validSteps.map(step => fetchStepOptions(msgId, step)))
+  async function fetchFirstStepOptions(msgId: string, steps: StepContent[]) {
+    const firstStep = steps.find(s => s.step > 0 && !s.options?.length)
+    if (firstStep) {
+      await fetchStepOptions(msgId, firstStep)
+    }
   }
 
   async function sendMessage(text: string, action: string = 'chat', silent: boolean = false) {
@@ -147,7 +151,8 @@ export const useChatStore = defineStore('chat', () => {
       let finalSteps: StepContent[] = []
       let convId = currentConversationId.value || undefined
 
-      for await (const chunk of streamChat(text, convId, action)) {
+      const useMultiProbe = action === 'chat' && multiProbeEnabled.value
+      for await (const chunk of streamChat(text, convId, action, useMultiProbe)) {
         if (chunk.type === 'chunk' && chunk.content) {
           fullText += chunk.content
           streamingContent.value = fullText
@@ -174,7 +179,7 @@ export const useChatStore = defineStore('chat', () => {
         assistantMsg.isStepComplete = false
         assistantMsg.stepAnswers = []
 
-        prefetchAllStepOptions(assistantMsg.id, finalSteps)
+        fetchFirstStepOptions(assistantMsg.id, finalSteps)
       } else {
         assistantMsg.content = fullText
         assistantMsg.isStepComplete = true
@@ -216,6 +221,10 @@ export const useChatStore = defineStore('chat', () => {
     const totalSteps = msg.steps.filter(s => s.step > 0).length
     if (stepNum < totalSteps) {
       msg.currentStep = stepNum + 1
+      const nextStep = msg.steps.find(s => s.step === msg.currentStep)
+      if (nextStep) {
+        fetchStepOptions(msgId, nextStep)
+      }
     } else {
       msg.currentStep = totalSteps + 1
       msg.isStepComplete = false
@@ -331,6 +340,7 @@ ${dialogueParts.join('\n\n---\n\n')}
     streamingContent,
     streamingSteps,
     stepOptionsLoading,
+    multiProbeEnabled,
     currentTitle,
     authToken,
     currentUser,

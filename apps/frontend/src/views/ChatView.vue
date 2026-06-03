@@ -674,7 +674,10 @@ watch(
 
           <div id="bottomBar">
             <div class="bottom-inner">
-              <div class="bottom-card" :class="{ focused: activeFocused }">
+              <div
+                class="bottom-card"
+                :class="{ focused: activeFocused, 'multi-probe-active': chatStore.multiProbeEnabled }"
+              >
                 <div class="bottom-glow-orb bottom-glow-blue" aria-hidden="true"></div>
                 <textarea
                   v-model="activeInput"
@@ -684,6 +687,17 @@ watch(
                   @focus="activeFocused = true"
                   @blur="activeFocused = false"
                 />
+                <label
+                  class="probe-toggle"
+                  :class="{ active: chatStore.multiProbeEnabled }"
+                  title="开启后，后续对话会轻量多面追问"
+                >
+                  <input v-model="chatStore.multiProbeEnabled" type="checkbox" />
+                  <span class="probe-toggle-text">追问模式</span>
+                  <span class="probe-switch" aria-hidden="true">
+                    <span></span>
+                  </span>
+                </label>
                 <button
                   class="send-circle"
                   type="button"
@@ -1391,7 +1405,9 @@ watch(
 }
 
 .bottom-card textarea {
-  padding: 14px 52px 12px 0;
+  position: relative;
+  z-index: 1;
+  padding: 14px 164px 12px 0;
   border: none;
   border-radius: 0;
 }
@@ -1438,6 +1454,82 @@ watch(
   position: absolute;
   bottom: 14px;
   right: 16px;
+  z-index: 2;
+}
+
+.probe-toggle {
+  position: absolute;
+  right: 62px;
+  bottom: 18px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 5px 7px 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--text-tertiary);
+  box-shadow: inset 0 0 0 1px rgba(35, 51, 75, 0.08);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.probe-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.probe-toggle-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.probe-switch {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(22, 24, 29, 0.12);
+  transition: background 0.18s ease;
+}
+
+.probe-switch span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(251, 250, 247, 0.96);
+  box-shadow: 0 1px 4px rgba(29, 36, 48, 0.22);
+  transition: transform 0.18s ease;
+}
+
+.probe-toggle:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.probe-toggle.active {
+  color: var(--accent-blue-strong);
+  background: color-mix(in srgb, var(--accent-blue) 9%, rgba(251, 250, 247, 0.72));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-blue) 20%, transparent);
+}
+
+.probe-toggle.active .probe-switch {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-amber));
+}
+
+.probe-toggle.active .probe-switch span {
+  transform: translateX(14px);
 }
 
 .send-circle {
@@ -2151,6 +2243,23 @@ watch(
 
   .init-input-shell textarea {
     min-height: 76px;
+  }
+
+  .bottom-card {
+    padding-right: 14px;
+  }
+
+  .bottom-card textarea {
+    padding-right: 112px;
+  }
+
+  .probe-toggle {
+    right: 58px;
+    padding: 6px;
+  }
+
+  .probe-toggle-text {
+    display: none;
   }
 }
 </style>

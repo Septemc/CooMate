@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from database import Conversation, Message, User, get_db
 from models.schemas import ChatRequest, ConversationOut, ConversationSummary, MessageOut, GenerateOptionsRequest, GenerateOptionsResponse, StepOptionOut
-from llm_client import stream_chat, parse_steps, _build_messages, generate_step_options
+from llm_client import stream_chat, parse_steps, _build_messages, generate_step_options, resolve_chat_action
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -60,6 +60,19 @@ async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)
         db.commit()
         db.refresh(conv)
 
+    existing_msg_count = db.query(Message).filter(Message.conversation_id == conv.id).count()
+    has_assistant_history = (
+        db.query(Message)
+        .filter(Message.conversation_id == conv.id, Message.role == "assistant")
+        .first()
+        is not None
+    )
+    effective_action = resolve_chat_action(
+        req.action,
+        has_assistant_history=has_assistant_history,
+        multi_probe=req.multi_probe,
+    )
+
     # Store user message
     user_msg = Message(
         id=str(uuid.uuid4()),
@@ -70,8 +83,7 @@ async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)
     db.add(user_msg)
 
     # Update title on first message
-    msg_count = db.query(Message).filter(Message.conversation_id == conv.id).count()
-    if msg_count == 0:
+    if existing_msg_count == 0:
         conv.title = req.message[:30] + ("..." if len(req.message) > 30 else "")
     db.commit()
 
@@ -88,7 +100,7 @@ async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)
 
     async def generate():
         full_text = ""
-        async for chunk in stream_chat(_build_messages(history, req.message), req.action):
+        async for chunk in stream_chat(_build_messages(history, req.message), effective_action):
             full_text += chunk
             yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
 

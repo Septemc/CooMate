@@ -59,13 +59,61 @@ def _normalize_url(base_url: str, path: str) -> str:
     return f"{base_url.rstrip('/')}{path}"
 
 
+def resolve_chat_action(action: str, has_assistant_history: bool, multi_probe: bool = False) -> str:
+    if action != "chat":
+        return action
+    if not has_assistant_history:
+        return "chat"
+    return "multi_probe" if multi_probe else "follow_up"
+
+
+_FOLLOW_UP_SYSTEM_PROMPT = """你是 CooMate——用户的专属 AI 认知参谋。
+
+当前不是首次建模。首次五步流程已经完成或正在当前会话中存在，因此这次不要再输出五步结构。
+
+你的任务：
+1. 用1-2句承接用户刚刚说的话，指出其中最需要继续澄清的点
+2. 只提出1个最能推进对话的问题
+3. 不要给结论性建议，不要替用户做决定
+4. 不要输出选项列表，不要使用"第一步/第二步"等五步标题
+5. 问题要具体但不压迫，适合用户自然继续回答
+"""
+
+
+_MULTI_PROBE_SYSTEM_PROMPT = """你是 CooMate——用户的专属 AI 认知参谋。
+
+当前开启了轻量多面追问。首次五步流程已经完成或正在当前会话中存在，因此这次不要再输出五步结构。
+
+你的任务：
+1. 用1句话承接用户刚刚说的话
+2. 按当前上下文只提出1到2个问题；只有确有必要时才问第2个
+3. 问题应来自不同维度，例如事实、情绪、需求、代价、下一步行动
+4. 不要超过2个问题，不要给结论性建议，不要替用户做决定
+5. 不要输出选项列表，不要使用"第一步/第二步"等五步标题
+"""
+
+
+_SUMMARY_SYSTEM_PROMPT = """你是 CooMate——用户的专属 AI 认知参谋。
+
+当前任务是生成结构化复盘报告。不要使用五步提问结构，不要继续追问，直接根据用户提供的对话记录输出报告。
+"""
+
+
 async def stream_chat(
     messages: list[dict],
     action: str = "chat",
 ) -> AsyncIterator[str]:
     """Stream LLM response as plain text chunks."""
 
-    system_prompt = _get_system_prompt()
+    if action == "follow_up":
+        system_prompt = _FOLLOW_UP_SYSTEM_PROMPT
+    elif action == "multi_probe":
+        system_prompt = _MULTI_PROBE_SYSTEM_PROMPT
+    elif action == "summarize":
+        system_prompt = _SUMMARY_SYSTEM_PROMPT
+    else:
+        system_prompt = _get_system_prompt()
+
     if action == "regenerate_angles":
         system_prompt += "\n\n用户要求'换个角度'。请只重新生成第四步（多角度思考题），使用完全不同的视角组合。"
     elif action == "export_review":
@@ -146,8 +194,11 @@ _OPTIONS_SYSTEM_PROMPT = """你是一个正在寻求帮助的普通人。你刚�
    - B：犹豫保留型——还没完全想清楚，或者有些抗拒
    - C：转移/求助型——想换个角度，或者需要更多帮助
 3. 每个回答必须是具体的、有内容的，不能是泛泛的"同意/不同意"
-4. 回答要像真人在说话，用第一人称，简短但具体
-5. 严格按以下JSON格式输出，不要输出任何其他内容：
+4. 回答必须停留在宏观层面：表达可普遍选择的内心状态、倾向、顾虑或需要
+5. 不要编造用户没有提供的具体事件、时间、地点、人物行为、争吵细节或身体反应
+6. 如果用户只说"纠结要不要分手"，不要写成"昨天他和我吵架"这类具体经历
+7. 回答要像真人在说话，用第一人称，简短但具体
+8. 严格按以下JSON格式输出，不要输出任何其他内容：
 {"options":[{"key":"A","label":"具体的回答内容"},{"key":"B","label":"具体的回答内容"},{"key":"C","label":"具体的回答内容"}]}"""
 
 
