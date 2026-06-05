@@ -11,9 +11,25 @@ from sqlalchemy.orm import Session
 
 from database import Conversation, Message, User, get_db
 from models.schemas import ChatRequest, ConversationOut, ConversationSummary, MessageOut, GenerateOptionsRequest, GenerateOptionsResponse, StepOptionOut
-from llm_client import stream_chat, parse_steps, _build_messages, generate_step_options, resolve_chat_action
+from llm_client import stream_chat, parse_steps, steps_to_markdown, _build_messages, generate_step_options, resolve_chat_action
 
 router = APIRouter(prefix="/api", tags=["chat"])
+
+
+def finalize_assistant_response(
+    full_text: str,
+    effective_action: str,
+    user_message: str,
+    upstream_failed: bool = False,
+) -> tuple[list[dict], str]:
+    require_full_intake = effective_action == "chat" and not upstream_failed
+    steps = parse_steps(
+        full_text,
+        require_full_intake=require_full_intake,
+        user_context=user_message,
+    )
+    stored_content = steps_to_markdown(steps) if require_full_intake else full_text
+    return steps, stored_content
 
 
 def _get_user_from_request(request: Request, db: Session) -> User:
@@ -100,17 +116,33 @@ async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)
 
     async def generate():
         full_text = ""
-        async for chunk in stream_chat(_build_messages(history, req.message), effective_action):
-            full_text += chunk
-            yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
+        upstream_failed = False
+        try:
+            async for chunk in stream_chat(_build_messages(history, req.message), effective_action):
+                full_text += chunk
+                yield f"data: {json.dumps({'type': 'chunk', 'content': chunk}, ensure_ascii=False)}\n\n"
+        except Exception:
+            upstream_failed = True
+            full_text = "抱歉，上游 AI 服务暂时不可用。请检查 LLM API Key 或稍后重试。"
+            yield f"data: {json.dumps({'type': 'chunk', 'content': full_text}, ensure_ascii=False)}\n\n"
+
+        if not full_text.strip():
+            upstream_failed = True
+            full_text = "抱歉，上游 AI 服务没有返回内容，请稍后重试。"
+            yield f"data: {json.dumps({'type': 'chunk', 'content': full_text}, ensure_ascii=False)}\n\n"
 
         # Parse steps and store assistant message
-        steps = parse_steps(full_text)
+        steps, stored_content = finalize_assistant_response(
+            full_text,
+            effective_action,
+            req.message,
+            upstream_failed=upstream_failed,
+        )
         assistant_msg = Message(
             id=str(uuid.uuid4()),
             conversation_id=conv_id,
             role="assistant",
-            content=full_text,
+            content=stored_content,
             steps=steps,
         )
         db.add(assistant_msg)

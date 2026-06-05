@@ -23,6 +23,7 @@ export interface Message {
   stepAnswers?: StepAnswer[]
   currentStep?: number
   isStepComplete?: boolean
+  skipSupplement?: boolean
   isSummary?: boolean
   timestamp: number
 }

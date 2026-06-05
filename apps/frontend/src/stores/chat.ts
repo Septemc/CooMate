@@ -113,10 +113,14 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function fetchFirstStepOptions(msgId: string, steps: StepContent[]) {
-    const firstStep = steps.find(s => s.step > 0 && !s.options?.length)
-    if (firstStep) {
-      await fetchStepOptions(msgId, firstStep)
+  async function preloadStepOptions(msgId: string, steps: StepContent[]) {
+    const pendingSteps = steps.filter(s => s.step > 0 && !s.options?.length)
+    const [firstStep, ...remainingSteps] = pendingSteps
+    if (!firstStep) return
+
+    await fetchStepOptions(msgId, firstStep)
+    if (remainingSteps.length) {
+      void Promise.all(remainingSteps.map(step => fetchStepOptions(msgId, step)))
     }
   }
 
@@ -151,7 +155,8 @@ export const useChatStore = defineStore('chat', () => {
       let finalSteps: StepContent[] = []
       let convId = currentConversationId.value || undefined
 
-      const useMultiProbe = action === 'chat' && multiProbeEnabled.value
+      const hasAssistantHistory = messages.value.some(m => m.role === 'assistant' && m.id !== assistantMsg.id)
+      const useMultiProbe = action === 'chat' && multiProbeEnabled.value && hasAssistantHistory
       for await (const chunk of streamChat(text, convId, action, useMultiProbe)) {
         if (chunk.type === 'chunk' && chunk.content) {
           fullText += chunk.content
@@ -177,9 +182,10 @@ export const useChatStore = defineStore('chat', () => {
         assistantMsg.steps = finalSteps
         assistantMsg.currentStep = 1
         assistantMsg.isStepComplete = false
+        assistantMsg.skipSupplement = useMultiProbe
         assistantMsg.stepAnswers = []
 
-        fetchFirstStepOptions(assistantMsg.id, finalSteps)
+        void preloadStepOptions(assistantMsg.id, finalSteps)
       } else {
         assistantMsg.content = fullText
         assistantMsg.isStepComplete = true
@@ -226,8 +232,13 @@ export const useChatStore = defineStore('chat', () => {
         fetchStepOptions(msgId, nextStep)
       }
     } else {
-      msg.currentStep = totalSteps + 1
-      msg.isStepComplete = false
+      if (msg.skipSupplement) {
+        msg.currentStep = totalSteps
+        msg.isStepComplete = true
+      } else {
+        msg.currentStep = totalSteps + 1
+        msg.isStepComplete = false
+      }
     }
   }
 

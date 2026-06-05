@@ -614,7 +614,7 @@ watch(
                         </template>
 
                         <div
-                          v-if="msg.currentStep != null && msg.currentStep > msg.steps.filter(s => s.step > 0).length && !msg.isStepComplete"
+                          v-if="msg.currentStep != null && msg.currentStep > msg.steps.filter(s => s.step > 0).length && !msg.isStepComplete && !msg.skipSupplement"
                           class="bubble-ai step-supplement"
                         >
                           <div class="step-header">

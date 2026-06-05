@@ -8,18 +8,11 @@ import httpx
 
 from config import settings
 
-_SYSTEM_PROMPT: str | None = None
-
-
 def _get_system_prompt() -> str:
-    global _SYSTEM_PROMPT
-    if _SYSTEM_PROMPT is None:
-        prompt_path = settings._prompt_path
-        if prompt_path.exists():
-            _SYSTEM_PROMPT = prompt_path.read_text(encoding="utf-8")
-        else:
-            _SYSTEM_PROMPT = "你是 CooMate，用户的专属 AI 认知参谋。通过结构化提问引导用户自己找到答案。"
-    return _SYSTEM_PROMPT
+    prompt_path = settings._prompt_path
+    if prompt_path.exists():
+        return prompt_path.read_text(encoding="utf-8")
+    return "你是 CooMate，用户的专属 AI 认知参谋。通过结构化提问引导用户自己找到答案。"
 
 
 # ---------------------------------------------------------------------------
@@ -82,14 +75,20 @@ _FOLLOW_UP_SYSTEM_PROMPT = """你是 CooMate——用户的专属 AI 认知参�
 
 _MULTI_PROBE_SYSTEM_PROMPT = """你是 CooMate——用户的专属 AI 认知参谋。
 
-当前开启了轻量多面追问。首次五步流程已经完成或正在当前会话中存在，因此这次不要再输出五步结构。
+当前开启了轻量多面追问。首次五步流程已经完成或正在当前会话中存在，因此这次不要再输出完整五步结构。
 
 你的任务：
 1. 用1句话承接用户刚刚说的话
 2. 按当前上下文只提出1到2个问题；只有确有必要时才问第2个
 3. 问题应来自不同维度，例如事实、情绪、需求、代价、下一步行动
-4. 不要超过2个问题，不要给结论性建议，不要替用户做决定
-5. 不要输出选项列表，不要使用"第一步/第二步"等五步标题
+4. 按和首次对话相同的步骤标题格式输出，便于前端为每个问题生成选项和自定义输入：
+   **第一步：简短标题**
+   具体问题
+   **第二步：简短标题**
+   具体问题
+5. 不要超过2个问题，不要给结论性建议，不要替用户做决定
+6. 不要在正文里手写 A/B/C 选项；每一步的选项会由独立接口生成
+7. 不要在最后询问额外补充信息
 """
 
 
@@ -139,6 +138,7 @@ async def _stream_anthropic(messages: list[dict], system_prompt: str) -> AsyncIt
 
     async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("POST", url, headers=_anthropic_headers(), json=payload) as resp:
+            resp.raise_for_status()
             async for line in resp.aiter_lines():
                 if not line or not line.startswith("data: "):
                     continue
@@ -167,6 +167,7 @@ async def _stream_openai(messages: list[dict], system_prompt: str) -> AsyncItera
 
     async with httpx.AsyncClient(timeout=120) as client:
         async with client.stream("POST", url, headers=_openai_headers(), json=payload) as resp:
+            resp.raise_for_status()
             async for line in resp.aiter_lines():
                 if not line or not line.startswith("data: "):
                     continue
@@ -264,18 +265,133 @@ async def generate_step_options(step_title: str, step_content: str, user_context
     ]
 
 
-def parse_steps(full_text: str) -> list[dict]:
-    step_pattern = re.compile(
-        r"\*\*第([一二三四五])步[：:]\s*(.+?)\*\*\s*(.*?)(?=\*\*第[一二三四五]步|$)",
-        re.DOTALL,
+_STEP_MAP = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+_STEP_NUM_TO_CN = {v: k for k, v in _STEP_MAP.items()}
+_INTAKE_TITLES = {
+    1: "反问成立性",
+    2: "深挖追问",
+    3: "复盘与情绪标记",
+    4: "多角度思考题",
+    5: "一个微型实验",
+}
+_INTAKE_FALLBACK_QUESTIONS = {
+    1: "你现在纠结的前提，是这段关系还有修复空间，还是你只是还没有准备好离开？",
+    2: "你第一次认真冒出这个念头，是从哪一个具体时刻开始的？",
+    3: "你在这段关系里最反复出现的感受是什么？",
+    4: "如果暂时放下害怕，你最想先确认的事实是什么？",
+    5: "你愿意现在写下这段关系里最不能接受的一件事是什么吗？",
+}
+
+
+def _match_step_heading(line: str) -> tuple[int, str] | None:
+    match = re.match(
+        r"^\s*(?:#{1,6}\s*)?(?:\*\*)?第([一二三四五])步[：:]\s*([^*\n#]+?)(?:\*\*)?(?:\s*.*)?$",
+        line.strip(),
     )
-    step_map = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
+    if not match:
+        return None
+    return _STEP_MAP[match.group(1)], match.group(2).strip()
+
+
+def _strip_markdown_noise(line: str) -> str:
+    line = line.strip()
+    line = re.sub(r"^\s*(?:[-*+]\s+|\d+[.、]\s*)", "", line)
+    line = re.sub(r"^>+\s*", "", line)
+    line = re.sub(r"^第[一二三四五六七八九十]+个追问[：:]?\s*", "", line)
+    line = re.sub(r"^[\w\u4e00-\u9fff]{2,10}视角[：:]?\s*", "", line)
+    line = re.sub(r"[*_`#]", "", line)
+    return line.strip(" \t\"'“”")
+
+
+def _first_question(content: str, step_num: int) -> str:
+    content = re.sub(r"\[OPTIONS\][\s\S]*?\[/OPTIONS\]", "", content).strip()
+    for raw_line in content.splitlines():
+        line = _strip_markdown_noise(raw_line)
+        if not line or set(line) <= {"-"}:
+            continue
+        question_marks = [idx for idx in (line.find("？"), line.find("?")) if idx >= 0]
+        if not question_marks:
+            continue
+        end_idx = min(question_marks)
+        question = line[: end_idx + 1].strip()
+        if question:
+            return _limit_question(question)
+    return _INTAKE_FALLBACK_QUESTIONS.get(step_num, "你现在最需要先回答自己的那个问题是什么？")
+
+
+def _limit_question(question: str, max_len: int = 120) -> str:
+    question = re.sub(r"\s+", " ", question).strip()
+    if len(question) <= max_len:
+        return question
+    question = question[: max_len - 1].rstrip("，,；;：:、。！？?")
+    return f"{question}？"
+
+
+def _canonical_step(step_num: int, content: str) -> dict:
+    cn_num = _STEP_NUM_TO_CN[step_num]
+    return {
+        "step": step_num,
+        "title": f"第{cn_num}步：{_INTAKE_TITLES[step_num]}",
+        "content": _first_question(content, step_num),
+    }
+
+
+def steps_to_markdown(steps: list[dict]) -> str:
+    if not steps or steps[0].get("step", 0) <= 0:
+        return steps[0].get("content", "") if steps else ""
+    return "\n\n".join(f"**{step['title']}**\n{step['content']}" for step in steps)
+
+
+def parse_steps(
+    full_text: str,
+    require_full_intake: bool = False,
+    user_context: str = "",
+) -> list[dict]:
+    parsed_steps: list[dict] = []
+    current: dict | None = None
+
+    for line in full_text.splitlines():
+        heading = _match_step_heading(line)
+        if heading:
+            if current:
+                parsed_steps.append(current)
+            step_num, title = heading
+            current = {"step": step_num, "title": title, "content_lines": []}
+            continue
+        if current:
+            current["content_lines"].append(line)
+
+    if current:
+        parsed_steps.append(current)
+
+    if not parsed_steps:
+        if require_full_intake:
+            parsed_steps = [
+                {"step": step_num, "title": _INTAKE_TITLES[step_num], "content_lines": [user_context]}
+                for step_num in range(1, 6)
+            ]
+        else:
+            return [{"step": 0, "title": "回复", "content": full_text}]
+
+    if require_full_intake:
+        by_step = {
+            step["step"]: "\n".join(step["content_lines"]).strip()
+            for step in parsed_steps
+            if step["step"] in _INTAKE_TITLES
+        }
+        return [
+            _canonical_step(step_num, by_step.get(step_num) or user_context)
+            for step_num in range(1, 6)
+        ]
+
     steps = []
-    for m in step_pattern.finditer(full_text):
-        step_num = step_map.get(m.group(1), 0)
-        title = m.group(2).strip()
-        raw_content = m.group(3).strip()
-        steps.append({"step": step_num, "title": f"第{m.group(1)}步：{title}", "content": raw_content})
-    if not steps:
-        steps = [{"step": 0, "title": "回复", "content": full_text}]
+    for step in parsed_steps:
+        step_num = step["step"]
+        cn_num = _STEP_NUM_TO_CN[step_num]
+        raw_content = "\n".join(step["content_lines"]).strip()
+        steps.append({
+            "step": step_num,
+            "title": f"第{cn_num}步：{step['title']}",
+            "content": _first_question(raw_content, step_num),
+        })
     return steps
