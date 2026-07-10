@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import time
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -146,7 +146,7 @@ async def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)
             steps=steps,
         )
         db.add(assistant_msg)
-        conv.updated_at = time.time()
+        conv.updated_at = datetime.now(timezone.utc)
         db.commit()
 
         yield f"data: {json.dumps({'type': 'done', 'conversation_id': conv_id, 'steps': steps}, ensure_ascii=False)}\n\n"

@@ -388,10 +388,8 @@ watch(
           :key="conv.id"
           class="sb-mini-dot"
           type="button"
-          :title="conv.title"
           @click="handleHistoryClick(conv.id)"
         >
-          {{ getSessionInitial(conv.title) }}
         </button>
       </div>
     </div>
@@ -465,7 +463,7 @@ watch(
               </div>
               <textarea
                 v-model="initInput"
-                placeholder="例如：我纠结要不要分手"
+                placeholder="例如：我在纠结要不要做这件事情"
                 rows="5"
                 @keydown.enter.exact.prevent="handleInitSend"
                 @focus="initFocused = true"
